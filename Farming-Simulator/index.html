@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Farmer for a Day | Agricultural Simulation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&family=Merriweather:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Refined Earthy Brown & Gold Theme */
+            --bg-gradient: linear-gradient(135deg, #fdfbf7 0%, #f7e9d7 40%, #e8d5b7 100%);
+            --glass-bg: rgba(255, 252, 245, 0.65);
+            --glass-bg-card: rgba(255, 255, 255, 0.85);
+            --glass-border: rgba(139, 90, 43, 0.15);
+            --text-main: #3e2723;
+            --text-muted: #795548;
+            --primary: #6b4226; /* Rich Espresso Brown */
+            --primary-dark: #4a2c0f;
+            --accent: #d97706; /* Harvest Gold */
+            --green-leaf: #4d7c0f; /* Olive Green */
+            --danger: #b91c1c;
+            --soil: #4e342e;
+            --soil-dark: #3e2723;
+            --shadow-sm: 0 4px 6px -1px rgba(62, 39, 35, 0.08);
+            --shadow-md: 0 10px 15px -3px rgba(62, 39, 35, 0.1);
+            --shadow-lg: 0 25px 50px -12px rgba(62, 39, 35, 0.25);
+            --shadow-glow: 0 0 80px rgba(217, 119, 6, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Lato', sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            background: var(--bg-gradient);
+            color: var(--text-main);
+            overflow-x: hidden;
+            transition: background 1.5s ease;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Top Navigation Bar */
+        .top-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 252, 245, 0.8);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--glass-border);
+        }
+        .logo {
+            font-family: 'Merriweather', serif;
+            font-weight: 900;
+            font-size: 1.2rem;
+            color: var(--primary-dark);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        /* Atmospheric Background Elements */
+        .bg-elements {
+            position: fixed;
+            inset: 0;
+            z-index: 1;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .cloud {
+            position: absolute;
+            background: rgba(255, 251, 235, 0.9);
+            border-radius: 100px;
+            filter: blur(20px);
+            animation: drift linear infinite;
+        }
+        
+        @keyframes drift {
+            from { transform: translateX(-300px); }
+            to { transform: translateX(calc(100vw + 300px)); }
+        }
+
+        .rain-drop {
+            position: absolute;
+            width: 2px;
+            height: 25px;
+            background: linear-gradient(transparent, rgba(107, 66, 38, 0.5));
+            border-radius: 2px;
+            animation: rain-fall linear infinite;
+        }
+
+        @keyframes rain-fall {
+            0% { transform: translateY(-100vh) rotate(15deg); opacity: 0; }
+            10% { opacity: 1; }
+            100% { transform: translateY(110vh) rotate(15deg); opacity: 0.3; }
+        }
+
+        .sun-element {
+            position: absolute;
+            top: 10%;
+            right: 10%;
+            width: 160px;
+            height: 160px;
+            background: radial-gradient(circle, #fef3c7 20%, #f59e0b 40%, transparent 70%);
+            border-radius: 50%;
+            box-shadow: 0 0 120px #f59e0b;
+            animation: sun-pulse 4s ease-in-out infinite;
+            opacity: 0.7;
+            z-index: 1;
+        }
+
+        .sun-rays {
+            position: absolute;
+            top: 10%;
+            right: 10%;
+            width: 160px;
+            height: 160px;
+            animation: spin 30s linear infinite;
+            z-index: 1;
+        }
+
+        @keyframes sun-pulse {
+            0%, 100% { transform: scale(1); opacity: 0.6; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .container {
+            position: relative;
+            z-index: 10;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 6rem 1rem 4rem;
+        }
+
+        .screen {
+            width: 100%;
+            max-width: 1100px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(24px) saturate(180%);
+            -webkit-backdrop-filter: blur(24px) saturate(180%);
+            border: 1px solid var(--glass-border);
+            border-radius: 32px;
+            padding: 3rem;
+            box-shadow: var(--shadow-lg), var(--shadow-glow);
+            animation: slideInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+        }
+
+        @keyframes slideInUp {
+            from { opacity: 0; transform: translateY(60px) scale(0.96); filter: blur(5px); }
+            to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+        }
+
+        /* Typography */
+        h1 { font-family: 'Merriweather', serif; font-size: 3.5rem; font-weight: 900; line-height: 1.1; color: var(--primary-dark); margin-bottom: 1rem; }
+        h2 { font-family: 'Merriweather', serif; font-size: 2rem; font-weight: 700; color: var(--primary-dark); margin-bottom: 1rem; }
+        h3 { font-family: 'Merriweather', serif; font-size: 1.25rem; font-weight: 700; color: var(--primary); margin-bottom: 1rem; }
+        p { color: var(--text-muted); line-height: 1.6; }
+        .subtitle { font-size: 1.2rem; text-align: center; max-width: 600px; margin: 0 auto 2.5rem; }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+            padding: 1rem 2.5rem; font-size: 1.1rem; font-weight: 700; border: none;
+            border-radius: 16px; cursor: pointer; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            background: var(--primary); color: #fff; box-shadow: var(--shadow-md); text-decoration: none;
+            letter-spacing: 0.5px;
+        }
+        .btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); background: var(--primary-dark); }
+        .btn:active { transform: translateY(0); }
+        .btn-ghost { background: transparent; color: var(--primary-dark); box-shadow: none; border: 2px solid var(--primary-dark); }
+        .btn-ghost:hover { background: rgba(107, 66, 38, 0.05); }
+        .btn-accent { background: var(--accent); }
+        .btn-accent:hover { background: #b45309; }
+        .btn-large { padding: 1.25rem 3rem; font-size: 1.3rem; border-radius: 20px; }
+
+        /* Landing Screen */
+        .landing-content { text-align: center; display: flex; flex-direction: column; align-items: center; }
+        .hero-icon { width: 140px; height: 140px; margin-bottom: 2rem; animation: bounce 3s ease-in-out infinite; }
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
+
+        /* Special Badge */
+        .special-badge {
+            background: rgba(217, 119, 6, 0.12); color: var(--accent); border: 1px solid var(--accent);
+            padding: 0.75rem 1.5rem; border-radius: 50px; font-weight: 700; font-size: 1rem; margin-bottom: 1.5rem; text-align: center;
+            box-shadow: 0 4px 6px rgba(217, 119, 6, 0.1);
+            display: inline-block;
+        }
+
+        /* Scenario Cards */
+        .scenario-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 2.5rem; }
+        .info-card {
+            background: var(--glass-bg-card); padding: 1.5rem 1.25rem; border-radius: 20px; text-align: center;
+            border: 1px solid var(--glass-border); box-shadow: var(--shadow-sm); transition: transform 0.3s ease, box-shadow 0.3s ease;
+            position: relative; overflow: hidden;
+        }
+        .info-card::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: var(--accent); opacity: 0; transition: opacity 0.3s;
+        }
+        .info-card:hover { transform: translateY(-5px); box-shadow: var(--shadow-md); }
+        .info-card:hover::before { opacity: 1; }
+        .info-card .icon-wrapper { width: 48px; height: 48px; margin: 0 auto 1rem; background: rgba(107, 66, 38, 0.08); border-radius: 14px; display: flex; align-items: center; justify-content: center; color: var(--primary); }
+        .info-card .label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 700; margin-bottom: 0.5rem; }
+        .info-card .value { font-size: 1.2rem; font-weight: 900; color: var(--text-main); font-family: 'Merriweather', serif; }
+
+        /* Input Area */
+        .input-section { background: rgba(255, 251, 235, 0.6); border: 1px solid var(--glass-border); padding: 2rem; border-radius: 24px; box-shadow: var(--shadow-sm); }
+        .input-label { font-weight: 700; color: var(--primary-dark); margin-bottom: 1rem; display: block; font-size: 1.2rem; font-family: 'Merriweather', serif; }
+        .input-group { display: flex; gap: 1rem; margin-bottom: 1rem; }
+        .input-field { flex: 1; padding: 1.25rem 1.5rem; font-size: 1.1rem; border: 2px solid transparent; border-radius: 16px; background: #fff; box-shadow: var(--shadow-sm); outline: none; transition: all 0.2s ease; font-family: 'Lato', sans-serif; color: var(--text-main); }
+        .input-field:focus { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(217, 119, 6, 0.1); }
+        
+        .hint-box { background: rgba(217, 119, 6, 0.08); border: 1px dashed var(--accent); border-radius: 16px; padding: 1rem; margin-top: 1rem; display: none; }
+        .hint-box.show { display: block; animation: fadeInUp 0.5s; }
+        .hint-text { color: var(--accent); font-weight: 600; font-style: italic; }
+        .text-link { background: none; border: none; color: var(--primary); font-weight: 700; cursor: pointer; text-decoration: none; padding: 0.5rem 0; }
+
+        /* Growth Area */
+        .growth-container { display: flex; flex-direction: column; align-items: center; }
+        .progress-bar { width: 100%; max-width: 400px; height: 12px; background: rgba(107, 66, 38, 0.1); border-radius: 6px; margin-bottom: 2rem; overflow: hidden; }
+        .progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #d97706, #6b4226); border-radius: 6px; transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1); box-shadow: 0 0 10px rgba(217, 119, 6, 0.5); }
+
+        .stage-area {
+            width: 100%; max-width: 600px; height: 400px;
+            background: linear-gradient(to bottom, #e6d0b8 0%, #d4b896 60%, #c4a675 100%);
+            border-radius: 24px; position: relative; overflow: hidden; box-shadow: var(--shadow-md); border: 4px solid #fff;
+        }
+        
+        /* 3D Layered Soil Bed */
+        .soil-bed { position: absolute; bottom: 0; width: 100%; height: 80px; background: var(--soil-dark); }
+        .soil-layer-1 { position: absolute; bottom: 60px; width: 100%; height: 20px; background: var(--soil); border-radius: 50% 50% 0 0 / 100% 100% 0 0; box-shadow: inset 0 5px 10px rgba(0,0,0,0.3); }
+        .soil-clump { position: absolute; bottom: 75px; width: 15px; height: 8px; background: var(--soil); border-radius: 50%; }
+
+        .plant-base { position: absolute; bottom: 70px; left: 50%; transform: translateX(-50%); width: 200px; height: 300px; display: flex; justify-content: center; align-items: flex-end; }
+        .plant-stage-svg { position: absolute; bottom: 0; opacity: 0; transform: scale(0.5); transform-origin: bottom center; transition: all 1s cubic-bezier(0.34, 1.56, 0.64, 1); filter: drop-shadow(0 10px 5px rgba(0,0,0,0.1)); }
+        .plant-stage-svg.active { opacity: 1; transform: scale(1); animation: sway 3s ease-in-out infinite; }
+        
+        @keyframes sway {
+            0%, 100% { transform: scale(1) rotate(0deg); }
+            50% { transform: scale(1) rotate(3deg); }
+        }
+
+        /* Results Area */
+        .result-header { text-align: center; margin-bottom: 2rem; }
+        .result-title { font-size: 3rem; font-weight: 900; margin-bottom: 0.5rem; color: var(--primary-dark); }
+        .result-subtitle { font-size: 1.2rem; color: var(--text-muted); }
+
+        .score-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+        .score-card { 
+            background: var(--glass-bg-card); 
+            backdrop-filter: blur(10px);
+            padding: 1.5rem; border-radius: 24px; text-align: center; 
+            box-shadow: var(--shadow-md); display: flex; flex-direction: column; align-items: center; 
+            border: 1px solid var(--glass-border); 
+            transition: transform 0.3s ease;
+        }
+        .score-card:hover { transform: translateY(-5px); }
+
+        /* PERFECT CENTERED RING CSS */
+        .ring-wrapper {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 1rem;
+            display: grid;
+            place-items: center; 
+        }
+        .progress-ring {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            transform: rotate(-90deg);
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+        }
+        .ring-bg { stroke: rgba(107, 66, 38, 0.15); stroke-width: 8; fill: none; }
+        .ring-fill { stroke-width: 8; fill: none; stroke-linecap: round; transition: stroke-dashoffset 1.5s cubic-bezier(0.16, 1, 0.3, 1); }
+        
+        .ring-text {
+            font-family: 'Merriweather', serif;
+            font-size: 1.8rem;
+            font-weight: 900;
+            color: var(--primary-dark);
+            z-index: 2;
+        }
+
+        .score-icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
+        .score-value-text { font-size: 1.4rem; font-weight: 900; margin-bottom: 0.25rem; color: var(--primary-dark); font-family: 'Merriweather', serif; }
+        .score-label { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 700; margin-top: 0.25rem; }
+        .stars { color: var(--accent); font-size: 1.2rem; letter-spacing: 2px; }
+
+        .info-box { background: #fff; padding: 1.5rem; border-radius: 20px; margin-bottom: 1.5rem; box-shadow: var(--shadow-sm); border: 1px solid var(--glass-border); }
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+        
+        .list-item { display: flex; gap: 0.75rem; margin-bottom: 0.75rem; align-items: flex-start; }
+        .list-item:last-child { margin-bottom: 0; }
+        .list-icon { width: 24px; height: 24px; border-radius: 50%; background: #fee2e2; color: #b91c1c; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 0.8rem; font-weight: 900; margin-top: 2px; }
+        .list-icon.good { background: #dcfce7; color: #4d7c0f; }
+
+        /* Parameter Breakdown */
+        .param-row { margin-bottom: 1rem; }
+        .param-label { display: flex; justify-content: space-between; font-weight: 700; font-size: 0.9rem; margin-bottom: 0.25rem; color: var(--text-muted); }
+        .param-bar-bg { width: 100%; height: 8px; background: rgba(107, 66, 38, 0.1); border-radius: 4px; overflow: hidden; }
+        .param-bar-fill { height: 100%; width: 0%; border-radius: 4px; transition: width 1.5s cubic-bezier(0.16, 1, 0.3, 1); }
+
+        .chip-container { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+        .chip { padding: 0.5rem 1rem; background: rgba(217, 119, 6, 0.1); color: var(--accent); border-radius: 12px; font-weight: 700; font-size: 0.9rem; border: 1px solid rgba(217, 119, 6, 0.2); display: flex; align-items: center; gap: 0.5rem; }
+
+        .fact-box { background: linear-gradient(135deg, rgba(217, 119, 6, 0.1), rgba(107, 66, 38, 0.1)); border-left: 5px solid var(--accent); padding: 1.5rem; border-radius: 16px; margin-bottom: 2rem; }
+
+        .hidden { display: none !important; }
+        .flex-center { display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap; }
+        .text-danger { color: var(--danger) !important; }
+        .text-success { color: var(--green-leaf) !important; }
+        
+        .confetti-piece { position: fixed; width: 12px; height: 12px; top: -20px; z-index: 1000; animation: confetti-fall linear forwards; }
+        @keyframes confetti-fall { to { transform: translateY(110vh) rotate(720deg); opacity: 0.2; } }
+
+        @media (max-width: 768px) {
+            h1 { font-size: 2.5rem; }
+            .screen { padding: 1.5rem; border-radius: 24px; }
+            .input-group { flex-direction: column; }
+            .info-grid { grid-template-columns: 1fr; }
+            .top-bar { padding: 0.5rem 1rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Top Navigation -->
+    <div class="top-bar">
+        <div class="logo">
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M1 3h15v13H1z"/>
+  <path d="M16 8h4l3 3v5h-7z"/>
+  <circle cx="5.5" cy="18.5" r="2"/>
+  <circle cx="18.5" cy="18.5" r="2"/>
+</svg>            Farmer for a Day
+        </div>
+    </div>
+
+    <!-- Dynamic Weather Elements -->
+    <div class="bg-elements" id="bg-elements"></div>
+
+    <div class="container">
+        <!-- LANDING SCREEN -->
+        <div id="landing-screen" class="screen" style="max-width: 800px;">
+            <div class="landing-content">
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+  style="width: 80px; height: 80px;"
+>
+  <path d="M1 3h15v13H1z"/>
+  <path d="M16 8h4l3 3v5h-7z"/>
+  <circle cx="5.5" cy="18.5" r="2"/>
+  <circle cx="18.5" cy="18.5" r="2"/>
+</svg>
+                <h1>Farmer for a Day</h1>
+                <p class="subtitle">Step into the shoes of a farmer. Analyze the soil, climate, and season. Choose your crop wisely, watch it grow, and see how well it yields!</p>
+                <button class="btn btn-large" onclick="startGame()">Start Farming</button>
+            </div>
+        </div>
+
+        <!-- GAME SCREEN -->
+        <div id="game-screen" class="screen hidden">
+            <div style="text-align: center; margin-bottom: 2rem;">
+                <div id="special-condition-box" class="special-badge hidden"></div>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+                <h2 style="margin: 0;">Current Conditions</h2>
+                <button class="btn btn-ghost" onclick="startGame()">🔄 New Scenario</button>
+            </div>
+            
+            <div id="scenario-cards" class="scenario-grid"></div>
+
+            <div class="input-section">
+                <label class="input-label">Enter the crop you want to grow:</label>
+                <div class="input-group">
+                    <input type="text" id="crop-input" class="input-field" placeholder="e.g., Rice, Wheat, Cotton..." onkeypress="if(event.key==='Enter') growCrop()">
+                    <button class="btn" onclick="growCrop()">🌱 Plant Seed</button>
+                </div>
+                <p id="error-msg" class="text-danger" style="margin-top: 1rem; font-weight: 700; display: none;">Please enter a valid crop from our database (e.g., Rice, Wheat).</p>
+                
+                <button class="text-link" onclick="showHint()">💡 Need a hint?</button>
+                <div id="hint-box" class="hint-box">
+                    <p class="hint-text" id="hint-text"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- GROWTH SCREEN -->
+        <div id="growth-screen" class="screen hidden" style="max-width: 700px;">
+            <div class="growth-container">
+                <h2 id="growth-title">Growing Crop...</h2>
+                <div class="progress-bar"><div id="progress-fill" class="progress-fill"></div></div>
+                <div class="stage-area">
+                    <div class="soil-bed"></div>
+                    <div class="soil-layer-1"></div>
+                    <div class="soil-clump" style="left: 20%;"></div>
+                    <div class="soil-clump" style="left: 70%;"></div>
+                    <div class="soil-clump" style="left: 45%;"></div>
+                    <div class="plant-base" id="plant-container"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RESULT SCREEN -->
+        <div id="result-screen" class="screen hidden">
+            <div class="result-header">
+                <h2 id="result-title" class="result-title">Result</h2>
+                <p class="result-subtitle" id="result-subtitle"></p>
+            </div>
+            
+            <div class="score-grid">
+                <!-- Compatibility -->
+                <div class="score-card">
+                    <div class="ring-wrapper">
+                        <svg class="progress-ring" viewBox="0 0 120 120">
+                            <circle class="ring-bg" cx="60" cy="60" r="50"></circle>
+                            <circle class="ring-fill" cx="60" cy="60" r="50" stroke="#6b4226" id="ring-compat"></circle>
+                        </svg>
+                        <span class="ring-text" id="r-compat">0%</span>
+                    </div>
+                    <div class="score-label">Compatibility</div>
+                </div>
+                <!-- Health -->
+                <div class="score-card">
+                    <div class="ring-wrapper">
+                        <svg class="progress-ring" viewBox="0 0 120 120">
+                            <circle class="ring-bg" cx="60" cy="60" r="50"></circle>
+                            <circle class="ring-fill" cx="60" cy="60" r="50" stroke="#4d7c0f" id="ring-health"></circle>
+                        </svg>
+                        <span class="ring-text" id="r-health">0%</span>
+                    </div>
+                    <div class="score-label">Crop Health</div>
+                </div>
+                <!-- Yield -->
+                <div class="score-card">
+                    <div class="score-icon">🌾</div>
+                    <div class="score-value-text" id="r-yield">0</div>
+                    <div class="score-label">Yield</div>
+                </div>
+                <!-- Sustainability -->
+                <div class="score-card">
+                    <div class="score-icon">🌍</div>
+                    <div class="score-value-text" id="r-sus">0%</div>
+                    <div class="score-label">Sustainability</div>
+                </div>
+                <!-- Difficulty -->
+                <div class="score-card">
+                    <div class="score-icon">⚙️</div>
+                    <div class="score-value-text stars" id="r-diff">☆☆☆</div>
+                    <div class="score-label">Difficulty</div>
+                </div>
+            </div>
+
+            <div class="info-box">
+                <div class="info-grid">
+                    <div>
+                        <h3>Analysis & Reasons</h3>
+                        <div id="r-reasons"></div>
+                    </div>
+                    <div>
+                        <h3>Parameter Breakdown</h3>
+                        <div id="r-params"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-box" id="better-crops-box" style="display: none;">
+                <h3>Recommended Crops for this Scenario</h3>
+                <div class="chip-container" id="r-better"></div>
+            </div>
+
+            <div class="fact-box">
+                <h3 style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;"><span>💡</span> Did You Know?</h3>
+                <p style="color: var(--primary-dark);" id="r-fact"></p>
+            </div>
+
+            <div class="flex-center">
+                <button class="btn btn-ghost" onclick="retryScenario()">🔄 Try Another Crop</button>
+                <button class="btn btn-large btn-accent" onclick="startGame()">Next Scenario</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- STATE ---
+        let currentScenario = null;
+
+        // --- DATA: 15 DETAILED SCENARIOS ---
+        const scenarios = [
+            { region: 'Punjab', season: 'Kharif', temp: 31, rainfall: 'High', humidity: 72, soil: 'Clay Loam', ph: 6.8, water: 'Abundant', sunlight: 8, special: 'Monsoon onset' },
+            { region: 'Punjab', season: 'Rabi', temp: 17, rainfall: 'Low', humidity: 45, soil: 'Loamy Soil', ph: 7.1, water: 'Medium', sunlight: 7, special: 'Cool weather' },
+            { region: 'Rajasthan', season: 'Summer', temp: 39, rainfall: 'Very Low', humidity: 20, soil: 'Sandy Soil', ph: 8.2, water: 'Low', sunlight: 10, special: 'Extreme heat' },
+            { region: 'Kerala', season: 'Monsoon', temp: 29, rainfall: 'Very High', humidity: 90, soil: 'Laterite Soil', ph: 5.5, water: 'Abundant', sunlight: 5, special: 'Heavy rains' },
+            { region: 'Maharashtra', season: 'Kharif', temp: 28, rainfall: 'Medium', humidity: 60, soil: 'Black Cotton Soil', ph: 7.5, water: 'Medium', sunlight: 7, special: 'Drought-prone' },
+            { region: 'Gujarat', season: 'Summer', temp: 36, rainfall: 'Low', humidity: 35, soil: 'Black Soil', ph: 7.8, water: 'Low', sunlight: 9, special: 'High evaporation' },
+            { region: 'West Bengal', season: 'Monsoon', temp: 30, rainfall: 'Heavy', humidity: 85, soil: 'Alluvial Soil', ph: 6.5, water: 'Abundant', sunlight: 6, special: 'Flood-prone' },
+            { region: 'Tamil Nadu', season: 'Winter', temp: 27, rainfall: 'Medium', humidity: 70, soil: 'Red Soil', ph: 6.0, water: 'Medium', sunlight: 7, special: 'Mild winter' },
+            { region: 'Assam', season: 'Monsoon', temp: 28, rainfall: 'Very Heavy', humidity: 95, soil: 'Alluvial Soil', ph: 5.8, water: 'Abundant', sunlight: 4, special: 'Waterlogged' },
+            { region: 'Himachal Pradesh', season: 'Spring', temp: 18, rainfall: 'Medium', humidity: 50, soil: 'Mountain Soil', ph: 6.2, water: 'Medium', sunlight: 6, special: 'Hilly terrain' },
+            { region: 'Uttar Pradesh', season: 'Rabi', temp: 20, rainfall: 'Low', humidity: 40, soil: 'Loamy Soil', ph: 7.0, water: 'Medium', sunlight: 8, special: 'Fertile plains' },
+            { region: 'Karnataka', season: 'Kharif', temp: 26, rainfall: 'Medium', humidity: 65, soil: 'Red Loam', ph: 6.5, water: 'Medium', sunlight: 7, special: 'Red soil' },
+            { region: 'Andhra Pradesh', season: 'Kharif', temp: 32, rainfall: 'Low', humidity: 55, soil: 'Black Soil', ph: 7.8, water: 'Low', sunlight: 9, special: 'Heatwave' },
+            { region: 'Jammu & Kashmir', season: 'Summer', temp: 15, rainfall: 'Low', humidity: 40, soil: 'Mountain Soil', ph: 6.0, water: 'Medium', sunlight: 8, special: 'Cold nights' },
+            { region: 'Odisha', season: 'Monsoon', temp: 31, rainfall: 'High', humidity: 80, soil: 'Alluvial Soil', ph: 6.2, water: 'Abundant', sunlight: 5, special: 'Cyclone risk' }
+        ];
+
+        // --- DATA: 35 DETAILED CROPS ---
+        const crops = [
+            { name: 'Rice', temp: [22, 32], rain: 5, soil: ['clay', 'alluvial'], ph: [5.5, 6.8], season: ['kharif', 'monsoon'], water: 5, yieldNum: 4.5, diff: 'Medium', dur: '3-6 mo', sus: 70, fact: 'Rice requires standing water during much of its growth.' },
+            { name: 'Wheat', temp: [10, 25], rain: 2, soil: ['loamy', 'alluvial'], ph: [6.0, 7.5], season: ['rabi', 'winter'], water: 3, yieldNum: 3.2, diff: 'Easy', dur: '4 mo', sus: 80, fact: 'Wheat prefers cooler temperatures and is grown in Rabi season.' },
+            { name: 'Cotton', temp: [25, 35], rain: 3, soil: ['black', 'sandy loam'], ph: [6.0, 8.0], season: ['kharif'], water: 3, yieldNum: 2.5, diff: 'Hard', dur: '6-8 mo', sus: 60, fact: 'Cotton grows best in black soil and requires 6-8 months frost-free.' },
+            { name: 'Sugarcane', temp: [20, 35], rain: 4, soil: ['loamy', 'alluvial'], ph: [6.5, 7.5], season: ['kharif', 'summer'], water: 5, yieldNum: 70, diff: 'Medium', dur: '10-12 mo', sus: 65, fact: 'Sugarcane requires lots of water and is a long duration crop.' },
+            { name: 'Maize', temp: [18, 30], rain: 3, soil: ['loamy', 'sandy'], ph: [5.5, 7.0], season: ['kharif'], water: 3, yieldNum: 5.0, diff: 'Easy', dur: '3-4 mo', sus: 75, fact: 'Maize is a versatile crop that can grow in various soils.' },
+            { name: 'Potato', temp: [15, 25], rain: 3, soil: ['loamy', 'sandy'], ph: [5.0, 6.5], season: ['rabi', 'winter'], water: 3, yieldNum: 20, diff: 'Medium', dur: '3-4 mo', sus: 70, fact: 'Potato requires cool climate and well-drained soil.' },
+            { name: 'Mustard', temp: [15, 25], rain: 2, soil: ['loamy', 'alluvial'], ph: [6.0, 7.5], season: ['rabi'], water: 2, yieldNum: 1.5, diff: 'Easy', dur: '4-5 mo', sus: 85, fact: 'Mustard is highly drought resistant and needs cool weather.' },
+            { name: 'Bajra', temp: [25, 35], rain: 1, soil: ['sandy', 'black'], ph: [6.5, 7.5], season: ['kharif', 'summer'], water: 1, yieldNum: 2.0, diff: 'Easy', dur: '3-4 mo', sus: 90, fact: 'Bajra (Pearl Millet) is highly drought-resistant and thrives in arid regions.' },
+            { name: 'Groundnut', temp: [22, 28], rain: 2, soil: ['sandy', 'red'], ph: [5.5, 7.0], season: ['kharif'], water: 2, yieldNum: 1.8, diff: 'Medium', dur: '4-5 mo', sus: 75, fact: 'Groundnut grows best in sandy soil and requires good drainage.' },
+            { name: 'Soybean', temp: [20, 30], rain: 4, soil: ['loamy', 'black'], ph: [6.0, 7.5], season: ['kharif'], water: 4, yieldNum: 2.5, diff: 'Medium', dur: '3-4 mo', sus: 80, fact: 'Soybean enriches soil nitrogen and needs warm, humid weather.' },
+            { name: 'Tea', temp: [18, 30], rain: 5, soil: ['mountain', 'laterite'], ph: [4.5, 6.0], season: ['spring', 'monsoon'], water: 5, yieldNum: 2.0, diff: 'Hard', dur: 'Perennial', sus: 85, fact: 'Tea requires high rainfall and hilly terrains with acidic soil.' },
+            { name: 'Coffee', temp: [18, 28], rain: 4, soil: ['mountain', 'loamy'], ph: [5.5, 6.5], season: ['monsoon'], water: 4, yieldNum: 1.0, diff: 'Hard', dur: 'Perennial', sus: 85, fact: 'Coffee is shade-loving and needs well-drained soil with high organic matter.' },
+            { name: 'Tomato', temp: [18, 28], rain: 3, soil: ['loamy', 'red'], ph: [6.0, 7.0], season: ['rabi', 'kharif'], water: 3, yieldNum: 30, diff: 'Medium', dur: '3-4 mo', sus: 70, fact: 'Tomatoes need well-drained soil and cannot tolerate frost.' },
+            { name: 'Onion', temp: [15, 25], rain: 2, soil: ['sandy', 'loamy'], ph: [6.0, 7.0], season: ['rabi'], water: 2, yieldNum: 25, diff: 'Hard', dur: '4-5 mo', sus: 65, fact: 'Onions require cool weather for growth and warm weather for bulb formation.' },
+            { name: 'Banana', temp: [20, 35], rain: 4, soil: ['loamy', 'alluvial'], ph: [6.0, 7.5], season: ['kharif', 'summer'], water: 5, yieldNum: 50, diff: 'Medium', dur: '10-12 mo', sus: 60, fact: 'Banana is a heavy feeder and requires deep, well-drained soil.' },
+            { name: 'Apple', temp: [10, 20], rain: 3, soil: ['mountain', 'loamy'], ph: [6.0, 7.0], season: ['spring', 'winter'], water: 3, yieldNum: 15, diff: 'Hard', dur: 'Perennial', sus: 80, fact: 'Apples require chilling hours (below 7°C) during winter to break dormancy.' },
+            { name: 'Cabbage', temp: [15, 22], rain: 3, soil: ['loamy', 'sandy'], ph: [6.0, 7.0], season: ['winter', 'rabi'], water: 3, yieldNum: 40, diff: 'Easy', dur: '3-4 mo', sus: 75, fact: 'Cabbage thrives in cool, moist climates and requires fertile soil.' },
+            { name: 'Peas', temp: [10, 20], rain: 2, soil: ['loamy', 'sandy'], ph: [6.0, 7.5], season: ['rabi', 'winter'], water: 2, yieldNum: 8, diff: 'Easy', dur: '3-4 mo', sus: 85, fact: 'Peas are cool-season crops and fix nitrogen in the soil.' },
+            { name: 'Barley', temp: [12, 20], rain: 2, soil: ['loamy', 'sandy'], ph: [6.5, 8.0], season: ['rabi'], water: 2, yieldNum: 2.5, diff: 'Easy', dur: '4 mo', sus: 85, fact: 'Barley is highly tolerant of drought and salinity.' },
+            { name: 'Sunflower', temp: [20, 30], rain: 2, soil: ['loamy', 'black'], ph: [6.0, 7.5], season: ['kharif', 'spring'], water: 2, yieldNum: 2.0, diff: 'Medium', dur: '3-4 mo', sus: 80, fact: 'Sunflowers require full sun and are drought-resistant.' },
+            { name: 'Chickpea', temp: [15, 25], rain: 1, soil: ['loamy', 'sandy'], ph: [6.0, 8.0], season: ['rabi'], water: 1, yieldNum: 1.8, diff: 'Easy', dur: '4 mo', sus: 90, fact: 'Chickpea (Gram) is a hardy rabi crop that fixes nitrogen.' },
+            { name: 'Jowar', temp: [25, 35], rain: 2, soil: ['sandy', 'black'], ph: [6.0, 8.0], season: ['kharif'], water: 2, yieldNum: 2.5, diff: 'Easy', dur: '4-5 mo', sus: 85, fact: 'Jowar (Sorghum) is extremely drought-resistant and used for fodder and grain.' },
+            { name: 'Orange', temp: [15, 30], rain: 3, soil: ['loamy', 'sandy'], ph: [6.0, 7.5], season: ['spring', 'winter'], water: 3, yieldNum: 20, diff: 'Hard', dur: 'Perennial', sus: 75, fact: 'Oranges require a tropical to subtropical climate with well-drained soil.' },
+            { name: 'Mango', temp: [20, 35], rain: 3, soil: ['loamy', 'alluvial'], ph: [5.5, 7.5], season: ['summer', 'spring'], water: 3, yieldNum: 15, diff: 'Medium', dur: 'Perennial', sus: 80, fact: 'Mango is the king of fruits and requires a distinct dry season before flowering.' },
+            { name: 'Carrot', temp: [15, 22], rain: 2, soil: ['sandy', 'loamy'], ph: [5.5, 7.0], season: ['rabi', 'winter'], water: 2, yieldNum: 25, diff: 'Medium', dur: '3 mo', sus: 80, fact: 'Carrots prefer deep, loose, sandy soil for proper root development.' },
+            { name: 'Radish', temp: [10, 20], rain: 2, soil: ['sandy', 'loamy'], ph: [6.0, 7.0], season: ['winter', 'rabi'], water: 2, yieldNum: 30, diff: 'Easy', dur: '1-2 mo', sus: 85, fact: 'Radish is a fast-growing cool-season crop.' },
+            { name: 'Spinach', temp: [10, 20], rain: 3, soil: ['loamy', 'sandy'], ph: [6.0, 7.5], season: ['winter', 'rabi'], water: 3, yieldNum: 15, diff: 'Easy', dur: '1-2 mo', sus: 90, fact: 'Spinach is rich in iron and grows quickly in cool, moist conditions.' },
+            { name: 'Brinjal', temp: [20, 30], rain: 3, soil: ['loamy', 'sandy'], ph: [6.0, 7.5], season: ['kharif', 'rabi'], water: 3, yieldNum: 25, diff: 'Medium', dur: '4 mo', sus: 75, fact: 'Brinjal (Eggplant) requires a warm climate and fertile soil.' },
+            { name: 'Cauliflower', temp: [15, 22], rain: 3, soil: ['loamy', 'sandy'], ph: [6.0, 7.5], season: ['winter', 'rabi'], water: 3, yieldNum: 30, diff: 'Medium', dur: '3-4 mo', sus: 70, fact: 'Cauliflower is sensitive to temperature changes and requires consistent moisture.' },
+            { name: 'Grapes', temp: [20, 30], rain: 2, soil: ['sandy', 'loamy'], ph: [6.5, 7.5], season: ['spring', 'winter'], water: 2, yieldNum: 30, diff: 'Hard', dur: 'Perennial', sus: 70, fact: 'Grapes require a long, warm, dry summer for proper ripening.' },
+            { name: 'Papaya', temp: [25, 35], rain: 3, soil: ['loamy', 'sandy'], ph: [6.0, 7.0], season: ['summer', 'monsoon'], water: 3, yieldNum: 50, diff: 'Medium', dur: 'Perennial', sus: 75, fact: 'Papaya is a fast-growing tropical plant that requires good drainage.' },
+            { name: 'Pomegranate', temp: [20, 35], rain: 2, soil: ['loamy', 'sandy'], ph: [6.5, 8.0], season: ['spring', 'summer'], water: 2, yieldNum: 15, diff: 'Hard', dur: 'Perennial', sus: 80, fact: 'Pomegranate is highly drought-resistant and thrives in semi-arid conditions.' },
+            { name: 'Watermelon', temp: [25, 35], rain: 2, soil: ['sandy', 'loamy'], ph: [6.0, 7.5], season: ['summer'], water: 2, yieldNum: 40, diff: 'Medium', dur: '3-4 mo', sus: 70, fact: 'Watermelon requires a long, warm growing season and well-drained soil.' }
+        ];
+
+        const rainMap = { 'very low': 1, 'low': 2, 'medium': 3, 'high': 4, 'heavy': 4, 'very high': 5, 'very heavy': 5, 'abundant': 5 };
+
+        // --- SVG ICONS ---
+        const icons = {
+            location: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>',
+            season: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/><circle cx="12" cy="12" r="4"/></svg>',
+            temp: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 14.76V3.5a2.5 2.5 0 00-5 0v11.26a4.5 4.5 0 105 0z"/></svg>',
+            rain: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 13v8M8 13v8M12 15v8M20 16.58A5 5 0 0018 7h-1.26A8 8 0 104 15.25"/></svg>',
+            water: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 11-11.31 0z"/></svg>',
+            soil: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 22c1.25-.987 2.27-1.975 3.9-2 2.5-.03 3.78 2 6.1 2 2.3-.022 3.58-2 6.1-2 1.63.025 2.65 1.013 3.9 2M2 16c1.25-.987 2.27-1.975 3.9-2 2.5-.03 3.78 2 6.1 2 2.3-.022 3.58-2 6.1-2 1.63.025 2.65 1.013 3.9 2M2 10c1.25-.987 2.27-1.975 3.9-2 2.5-.03 3.78 2 6.1 2 2.3-.022 3.58-2 6.1-2 1.63.025 2.65 1.013 3.9 2"/></svg>',
+            sun: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>',
+            ph: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3v18M3 9h18M15 3v18"/></svg>',
+            check: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'
+        };
+
+        // --- LUSH DETAILED PLANT SVG STAGES ---
+        const plantStages = {
+            seed: `<svg class="plant-stage-svg" width="100" height="120" viewBox="0 0 100 120"><defs><radialGradient id="seedG" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#8d6e63" /><stop offset="100%" stop-color="#3e2723" /></radialGradient></defs><ellipse cx="50" cy="100" rx="12" ry="8" fill="url(#seedG)" /></svg>`,
+            sprout: `<svg class="plant-stage-svg" width="120" height="140" viewBox="0 0 120 140"><defs><linearGradient id="leafG1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#8bc34a" /><stop offset="100%" stop-color="#4d7c0f" /></linearGradient></defs><path d="M60 110 L60 80" stroke="#4d7c0f" stroke-width="4" stroke-linecap="round" /><path d="M60 80 C40 70, 30 60, 35 50 C50 50, 60 60, 60 80" fill="url(#leafG1)" /><path d="M60 80 C80 70, 90 60, 85 50 C70 50, 60 60, 60 80" fill="url(#leafG1)" transform="scale(-1, 1) translate(-120, 0)" /></svg>`,
+            plant: `<svg class="plant-stage-svg" width="160" height="220" viewBox="0 0 160 220"><defs><linearGradient id="leafG2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#8bc34a" /><stop offset="100%" stop-color="#4d7c0f" /></linearGradient></defs><path d="M80 200 L80 40" stroke="#4d7c0f" stroke-width="6" stroke-linecap="round" /><path d="M80 140 C40 130, 20 110, 20 90 C50 90, 80 100, 80 140" fill="url(#leafG2)" /><path d="M80 90 C120 80, 140 60, 140 40 C110 40, 80 50, 80 90" fill="url(#leafG2)" /><path d="M80 60 C50 50, 40 30, 40 10 C70 10, 80 30, 80 60" fill="url(#leafG2)" /></svg>`,
+            flower: `<svg class="plant-stage-svg" width="160" height="260" viewBox="0 0 160 260"><defs><linearGradient id="leafG3" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#8bc34a" /><stop offset="100%" stop-color="#4d7c0f" /></linearGradient><radialGradient id="flowerG" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#fbbf24" /><stop offset="100%" stop-color="#d97706" /></radialGradient></defs><path d="M80 240 L80 40" stroke="#4d7c0f" stroke-width="6" stroke-linecap="round" /><path d="M80 180 C40 170, 20 150, 20 130 C50 130, 80 140, 80 180" fill="url(#leafG3)" /><path d="M80 130 C120 120, 140 100, 140 80 C110 80, 80 90, 80 130" fill="url(#leafG3)" /><circle cx="80" cy="30" r="15" fill="url(#flowerG)" /><circle cx="80" cy="30" r="8" fill="#fef3c7" /><circle cx="60" cy="50" r="8" fill="#f59e0b" /><circle cx="100" cy="50" r="8" fill="#f59e0b" /></svg>`,
+            harvest: `<svg class="plant-stage-svg" width="160" height="300" viewBox="0 0 160 300"><defs><linearGradient id="leafG4" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#8bc34a" /><stop offset="100%" stop-color="#4d7c0f" /></linearGradient><linearGradient id="grainG" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#fbbf24" /><stop offset="100%" stop-color="#b45309" /></linearGradient></defs><path d="M80 280 L80 40" stroke="#4d7c0f" stroke-width="6" stroke-linecap="round" /><path d="M80 200 C40 190, 20 170, 20 150 C50 150, 80 160, 80 200" fill="url(#leafG4)" /><path d="M80 150 C120 140, 140 120, 140 100 C110 100, 80 110, 80 150" fill="url(#leafG4)" /><path d="M80 40 C60 10, 80 0, 80 0 C80 0, 100 10, 80 40" fill="url(#grainG)" /><path d="M60 50 C40 20, 60 10, 60 10 C60 10, 80 20, 60 50" fill="url(#grainG)" /><path d="M100 50 C120 20, 100 10, 100 10 C100 10, 80 20, 100 50" fill="url(#grainG)" /></svg>`,
+            dead: `<svg class="plant-stage-svg" width="160" height="220" viewBox="0 0 160 220"><defs><linearGradient id="deadG" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#8d6e63" /><stop offset="100%" stop-color="#3e2723" /></linearGradient></defs><path d="M80 200 L100 40" stroke="#3e2723" stroke-width="6" stroke-linecap="round" transform="rotate(15 80 200)" /><path d="M90 140 C120 130, 140 110, 140 90 C110 90, 90 100, 90 140" fill="url(#deadG)" transform="rotate(15 80 200)" /><path d="M90 90 C60 80, 40 60, 40 40 C70 40, 90 50, 90 90" fill="url(#deadG)" transform="rotate(15 80 200)" /></svg>`
+        };
+
+        // --- DOM ELEMENTS ---
+        const landingScreen = document.getElementById('landing-screen');
+        const gameScreen = document.getElementById('game-screen');
+        const growthScreen = document.getElementById('growth-screen');
+        const resultScreen = document.getElementById('result-screen');
+        const bgElements = document.getElementById('bg-elements');
+
+        // --- GAME LOGIC ---
+
+        function startGame() {
+            currentScenario = scenarios[Math.floor(Math.random() * scenarios.length)];
+            renderScenario(currentScenario);
+            updateWeatherTheme(currentScenario);
+            
+            switchScreen(gameScreen);
+            document.getElementById('crop-input').value = '';
+            document.getElementById('error-msg').style.display = 'none';
+            document.getElementById('hint-box').classList.remove('show');
+        }
+
+        function retryScenario() {
+            switchScreen(gameScreen);
+            document.getElementById('crop-input').value = '';
+            document.getElementById('error-msg').style.display = 'none';
+            document.getElementById('hint-box').classList.remove('show');
+        }
+
+        function switchScreen(screen) {
+            [landingScreen, gameScreen, growthScreen, resultScreen].forEach(s => s.classList.add('hidden'));
+            screen.classList.remove('hidden');
+        }
+
+        function renderScenario(s) {
+            const specialBox = document.getElementById('special-condition-box');
+            if (s.special) {
+                specialBox.innerText = `⚠️ Special Condition: ${s.special}`;
+                specialBox.classList.remove('hidden');
+            } else {
+                specialBox.classList.add('hidden');
+            }
+
+            const cards = [
+                { icon: icons.location, label: 'Region', value: s.region },
+                { icon: icons.season, label: 'Season', value: s.season },
+                { icon: icons.temp, label: 'Temperature', value: `${s.temp}°C` },
+                { icon: icons.rain, label: 'Rainfall', value: s.rainfall },
+                { icon: icons.water, label: 'Water', value: s.water },
+                { icon: icons.soil, label: 'Soil', value: s.soil },
+                { icon: icons.sun, label: 'Sunlight', value: `${s.sunlight} Hrs` },
+                { icon: icons.ph, label: 'Soil pH', value: s.ph }
+            ];
+
+            document.getElementById('scenario-cards').innerHTML = cards.map(c => `
+                <div class="info-card">
+                    <div class="icon-wrapper">${c.icon}</div>
+                    <div class="label">${c.label}</div>
+                    <div class="value">${c.value}</div>
+                </div>
+            `).join('');
+        }
+
+        function showHint() {
+            const s = currentScenario;
+            let hint = "";
+            if (s.temp > 35) hint = "It's very hot! Try a heat-resistant crop like Bajra, Jowar, or Groundnut.";
+            else if (s.temp < 20) hint = "It's quite cold. Try Wheat, Mustard, or Apple.";
+            else if (s.soil.toLowerCase().includes('black')) hint = "Black soil is perfect for Cotton, Soybean, or Sunflower.";
+            else if (s.soil.toLowerCase().includes('sandy')) hint = "Sandy soil drains fast. Try Groundnut, Bajra, or Watermelon.";
+            else if (s.soil.toLowerCase().includes('mountain')) hint = "Mountain soil is great for Tea, Coffee, or Apple.";
+            else if (s.rainfall.toLowerCase().includes('high') || s.rainfall.toLowerCase().includes('heavy')) hint = "Lots of rain! Rice or Sugarcane would love this.";
+            else hint = "Try a versatile crop like Maize or Wheat.";
+            
+            document.getElementById('hint-text').innerText = hint;
+            document.getElementById('hint-box').classList.add('show');
+        }
+
+        function updateWeatherTheme(s) {
+            bgElements.innerHTML = '';
+            document.body.style.background = 'var(--bg-gradient)';
+
+            if (s.temp > 35) {
+                document.body.style.background = 'linear-gradient(135deg, #fef3c7 0%, #fde68a 50%, #f59e0b 100%)';
+                const sunCore = document.createElement('div'); sunCore.className = 'sun-element'; bgElements.appendChild(sunCore);
+                const sunRays = document.createElement('div'); sunRays.className = 'sun-rays';
+                sunRays.innerHTML = `<svg width="160" height="160" viewBox="0 0 100 100"><path d="M50 0 L55 45 L50 50 L45 45 Z" fill="#f59e0b" opacity="0.6"/><path d="M100 50 L55 55 L50 50 L55 45 Z" fill="#f59e0b" opacity="0.6"/><path d="M50 100 L55 55 L50 50 L45 55 Z" fill="#f59e0b" opacity="0.6"/><path d="M0 50 L45 55 L50 50 L45 45 Z" fill="#f59e0b" opacity="0.6"/></svg>`;
+                bgElements.appendChild(sunRays);
+                for(let i=0; i<2; i++) { const cloud = document.createElement('div'); cloud.className = 'cloud'; cloud.style.width = '300px'; cloud.style.height = '80px'; cloud.style.top = `${10 + i * 20}%`; cloud.style.animationDuration = `${40 + i * 10}s`; bgElements.appendChild(cloud); }
+            } else if (s.rainfall.toLowerCase().includes('high') || s.rainfall.toLowerCase().includes('heavy') || s.season === 'Monsoon') {
+                document.body.style.background = 'linear-gradient(135deg, #8d6e63 0%, #a1887f 50%, #d7ccc8 100%)';
+                for(let i=0; i<80; i++) { const drop = document.createElement('div'); drop.className = 'rain-drop'; drop.style.left = `${Math.random()*100}%`; drop.style.animationDuration = `${0.5 + Math.random() * 0.5}s`; drop.style.animationDelay = `${Math.random()*2}s`; bgElements.appendChild(drop); }
+            } else if (s.temp < 20) {
+                document.body.style.background = 'linear-gradient(135deg, #eceff1 0%, #cfd8dc 50%, #b0bec5 100%)';
+            }
+        }
+
+        function growCrop() {
+            const inputVal = document.getElementById('crop-input').value.trim().toLowerCase();
+            const crop = crops.find(c => c.name.toLowerCase() === inputVal);
+
+            if (!crop) { document.getElementById('error-msg').style.display = 'block'; return; }
+            document.getElementById('error-msg').style.display = 'none';
+            
+            const result = analyzeCrop(crop, currentScenario);
+            switchScreen(growthScreen);
+            document.getElementById('growth-title').innerText = `Growing ${crop.name}...`;
+            animateGrowth(result, crop);
+        }
+
+        function analyzeCrop(crop, s) {
+            let score = 100; let reasons = []; let isGood = [];
+            let params = { temp: 100, rain: 100, soil: 100, season: 100, ph: 100 };
+
+            if (s.temp < crop.temp[0] - 5 || s.temp > crop.temp[1] + 5) { score -= 30; params.temp = 0; reasons.push({text: `Temperature ${s.temp}°C is highly unsuitable (Ideal: ${crop.temp[0]}-${crop.temp[1]}°C).`, good: false}); } 
+            else if (s.temp < crop.temp[0] || s.temp > crop.temp[1]) { score -= 10; params.temp = 60; reasons.push({text: `Temperature is slightly out of ideal range.`, good: false}); } 
+            else { isGood.push('Temperature is perfect.'); }
+
+            const sRain = rainMap[s.rainfall.toLowerCase()] || 3;
+            if (Math.abs(sRain - crop.rain) >= 3) { score -= 25; params.rain = 0; reasons.push({text: `${s.rainfall} rainfall is highly unsuitable.`, good: false}); } 
+            else if (Math.abs(sRain - crop.rain) === 2) { score -= 10; params.rain = 60; reasons.push({text: `Rainfall levels are not optimal.`, good: false}); } 
+            else { isGood.push('Rainfall is optimal.'); }
+
+            const sSoil = s.soil.toLowerCase();
+            const soilMatch = crop.soil.some(c => sSoil.includes(c));
+            if (!soilMatch) { score -= 20; params.soil = 0; reasons.push({text: `${s.soil} is not suitable for ${crop.name}.`, good: false}); } 
+            else { isGood.push('Soil type is correct.'); }
+
+            if (!crop.season.includes(s.season.toLowerCase())) { score -= 10; params.season = 0; reasons.push({text: `${s.season} is not the ideal season.`, good: false}); } 
+            else { isGood.push('Season is perfect.'); }
+
+            if (s.ph < crop.ph[0] || s.ph > crop.ph[1]) { score -= 10; params.ph = 0; reasons.push({text: `Soil pH ${s.ph} is outside the ideal range.`, good: false}); } 
+            else { isGood.push('pH level is balanced.'); }
+
+            score = Math.max(0, Math.round(score));
+
+            let finalYield = 0;
+            if (score >= 85) { finalYield = crop.yieldNum; } 
+            else if (score >= 40) { finalYield = parseFloat((crop.yieldNum * (score / 100)).toFixed(1)); } 
+            else { finalYield = parseFloat((crop.yieldNum * 0.1).toFixed(1)); }
+
+            const finalReasons = [...reasons, ...isGood.map(g => ({text: g, good: true}))];
+            return { score, finalYield, reasons: finalReasons, crop, params };
+        }
+
+        function animateGrowth(result, crop) {
+            const container = document.getElementById('plant-container');
+            const progress = document.getElementById('progress-fill');
+            container.innerHTML = ''; progress.style.width = '0%';
+
+            let maxStage = 4; 
+            if (result.score < 85) maxStage = 2; 
+            if (result.score < 65) maxStage = 1; 
+            if (result.score < 40) maxStage = 5; 
+
+            let stagesHtml = '';
+            stagesHtml += plantStages.seed.replace('class="plant-stage-svg"', 'class="plant-stage-svg" id="stage-0"');
+            stagesHtml += plantStages.sprout.replace('class="plant-stage-svg"', 'class="plant-stage-svg" id="stage-1"');
+            stagesHtml += plantStages.plant.replace('class="plant-stage-svg"', 'class="plant-stage-svg" id="stage-2"');
+            if (result.score > 65) stagesHtml += plantStages.flower.replace('class="plant-stage-svg"', 'class="plant-stage-svg" id="stage-3"');
+            if (result.score > 85) stagesHtml += plantStages.harvest.replace('class="plant-stage-svg"', 'class="plant-stage-svg" id="stage-4"');
+            if (result.score < 40) stagesHtml += plantStages.dead.replace('class="plant-stage-svg"', 'class="plant-stage-svg" id="stage-5"');
+            
+            container.innerHTML = stagesHtml;
+
+            let curr = 0;
+            const interval = setInterval(() => {
+                if (curr <= maxStage) {
+                    const stageEl = document.getElementById(`stage-${curr}`);
+                    if(stageEl) stageEl.classList.add('active');
+                    if (curr > 0) { const prevEl = document.getElementById(`stage-${curr-1}`); if(prevEl) prevEl.style.opacity = '0.3'; }
+                    progress.style.width = `${(curr / 5) * 100}%`;
+                    curr++;
+                } else {
+                    clearInterval(interval);
+                    progress.style.width = '100%';
+                    setTimeout(() => showResult(result), 1000);
+                }
+            }, 1000);
+        }
+
+        function showResult(result) {
+            switchScreen(resultScreen);
+            const r = result;
+            const healthScore = r.score > 85 ? 95 : r.score > 65 ? 74 : r.score > 40 ? 40 : 5;
+
+            document.getElementById('result-title').innerText = r.score > 85 ? '🎉 Excellent Choice!' : r.score > 65 ? '👍 Good Choice' : r.score > 40 ? '⚠️ Poor Choice' : '🥀 Crop Failed';
+            document.getElementById('result-title').className = `result-title ${r.score > 65 ? 'text-success' : r.score > 40 ? '' : 'text-danger'}`;
+            document.getElementById('result-subtitle').innerText = r.score > 85 ? `${r.crop.name} grows extremely well under these conditions.` : 'Review the analysis below to improve your next harvest.';
+            
+            document.getElementById('r-compat').innerText = '0%';
+            document.getElementById('r-health').innerText = '0%';
+            
+            const stars = r.crop.diff === 'Easy' ? '★☆☆' : r.crop.diff === 'Medium' ? '★★☆' : '★★★';
+            document.getElementById('r-diff').innerText = stars;
+            document.getElementById('r-sus').innerText = r.crop.sus + '%';
+            
+            // Animate Numbers
+            animateValue('r-yield', 0, r.finalYield, 1500, "", " t/ha");
+            
+            setTimeout(() => {
+                setRing('ring-compat', r.score);
+                setRing('ring-health', healthScore);
+                document.getElementById('r-compat').innerText = r.score + '%';
+                document.getElementById('r-health').innerText = healthScore + '%';
+            }, 200);
+
+            const reasonsHtml = r.reasons.map(res => `
+                <div class="list-item">
+                    <div class="list-icon ${res.good ? 'good' : ''}">${res.good ? icons.check : '!'}</div>
+                    <div style="font-weight: 500; color: var(--text-main);">${res.text}</div>
+                </div>
+            `).join('');
+            document.getElementById('r-reasons').innerHTML = reasonsHtml;
+
+            const paramsHtml = `
+                <div class="param-row"><div class="param-label"><span>Temperature</span><span>${r.params.temp}%</span></div><div class="param-bar-bg"><div class="param-bar-fill" style="background: ${r.params.temp > 50 ? 'var(--green-leaf)' : 'var(--danger)'};" data-width="${r.params.temp}"></div></div></div>
+                <div class="param-row"><div class="param-label"><span>Rainfall</span><span>${r.params.rain}%</span></div><div class="param-bar-bg"><div class="param-bar-fill" style="background: ${r.params.rain > 50 ? 'var(--green-leaf)' : 'var(--danger)'};" data-width="${r.params.rain}"></div></div></div>
+                <div class="param-row"><div class="param-label"><span>Soil Type</span><span>${r.params.soil}%</span></div><div class="param-bar-bg"><div class="param-bar-fill" style="background: ${r.params.soil > 50 ? 'var(--green-leaf)' : 'var(--danger)'};" data-width="${r.params.soil}"></div></div></div>
+                <div class="param-row"><div class="param-label"><span>Season</span><span>${r.params.season}%</span></div><div class="param-bar-bg"><div class="param-bar-fill" style="background: ${r.params.season > 50 ? 'var(--green-leaf)' : 'var(--danger)'};" data-width="${r.params.season}"></div></div></div>
+                <div class="param-row"><div class="param-label"><span>Soil pH</span><span>${r.params.ph}%</span></div><div class="param-bar-bg"><div class="param-bar-fill" style="background: ${r.params.ph > 50 ? 'var(--green-leaf)' : 'var(--danger)'};" data-width="${r.params.ph}"></div></div></div>
+            `;
+            document.getElementById('r-params').innerHTML = paramsHtml;
+
+            setTimeout(() => { document.querySelectorAll('.param-bar-fill').forEach(bar => { bar.style.width = bar.dataset.width + '%'; }); }, 300);
+
+            document.getElementById('r-fact').innerText = r.crop.fact;
+
+            if (r.score < 85) {
+                document.getElementById('better-crops-box').style.display = 'block';
+                const better = crops.filter(c => { return analyzeCrop(c, currentScenario).score > 85 && c.name !== r.crop.name; }).slice(0, 3);
+                if(better.length > 0) { document.getElementById('r-better').innerHTML = better.map(c => `<div class="chip">${icons.check} ${c.name}</div>`).join(''); } 
+                else { document.getElementById('r-better').innerHTML = '<div class="chip">No perfect matches found.</div>'; }
+            } else {
+                document.getElementById('better-crops-box').style.display = 'none';
+            }
+
+            if (r.score > 85) createConfetti();
+        }
+
+        function animateValue(id, start, end, duration, prefix = "", suffix = "") {
+            const obj = document.getElementById(id);
+            let startTimestamp = null;
+            const step = (timestamp) => {
+                if (!startTimestamp) startTimestamp = timestamp;
+                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                const value = Math.floor(progress * (end - start) + start);
+                obj.innerHTML = `${prefix}${value.toLocaleString('en-IN')}${suffix}`;
+                if (progress < 1) { window.requestAnimationFrame(step); }
+            };
+            window.requestAnimationFrame(step);
+        }
+
+        function setRing(id, percent) {
+            const circle = document.getElementById(id);
+            if (!circle) return;
+            const radius = 50; 
+            const circumference = 2 * Math.PI * radius;
+            circle.style.strokeDasharray = `${circumference} ${circumference}`;
+            circle.style.strokeDashoffset = circumference;
+            const offset = circumference - (percent / 100) * circumference;
+            circle.style.strokeDashoffset = offset;
+        }
+
+        function createConfetti() {
+            const colors = ['#fbbf24', '#4d7c0f', '#d97706', '#b91c1c', '#6b4226'];
+            for(let i=0; i<80; i++) {
+                const conf = document.createElement('div');
+                conf.classList.add('confetti-piece');
+                conf.style.left = Math.random() * 100 + 'vw';
+                conf.style.background = colors[Math.floor(Math.random()*colors.length)];
+                conf.style.animationDuration = (2 + Math.random() * 2) + 's';
+                conf.style.animationDelay = Math.random() + 's';
+                conf.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+                document.body.appendChild(conf);
+                setTimeout(() => conf.remove(), 4000);
+            }
+        }
+    </script>
+</body>
+</html>
